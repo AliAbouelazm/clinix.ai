@@ -282,7 +282,7 @@ st.markdown("""
     <div class="logo-text">clinix.ai</div>
     <div class="logo-subtitle">medical triage assessment</div>
     <div style="margin-top: 1rem; font-family: 'Crimson Text', serif; font-size: 0.85rem; color: #8b6f47; font-weight: 600;">
-        Version 4.0 - Layered Spectrum-Based Risk Assessment
+        Version 4.1 - Continuous Spectrum Risk Assessment (Tested & Refined)
     </div>
 </div>
 """, unsafe_allow_html=True)

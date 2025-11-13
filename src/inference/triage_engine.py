@@ -54,7 +54,7 @@ def _layer1_critical_life_threatening(raw_text: str) -> float:
 def _layer2_severe_injuries(raw_text: str, parsed_symptoms: Dict[str, Any]) -> float:
     """
     Layer 2: Severe injuries and trauma.
-    Returns risk score contribution (0.0 to 1.0).
+    Returns risk score contribution (0.0 to 1.0) with granular spectrum.
     """
     if not raw_text:
         return 0.0
@@ -66,57 +66,49 @@ def _layer2_severe_injuries(raw_text: str, parsed_symptoms: Dict[str, Any]) -> f
     
     if "broken" in text_lower:
         if "arm" in text_lower or "leg" in text_lower or "foot" in text_lower or "ankle" in text_lower:
-            risk = max(risk, 0.85)
+            risk = max(risk, 0.82)
         else:
-            risk = max(risk, 0.75)
+            risk = max(risk, 0.72)
     
     if any(phrase in text_lower for phrase in ["wrong way", "facing wrong", "out of place", "dislocated"]):
-        risk = max(risk, 0.80)
+        risk = max(risk, 0.78)
     
     if len(injuries) >= 2:
-        risk = max(risk, 0.90)
+        risk = max(risk, 0.88)
     elif len(injuries) == 1:
-        risk = max(risk, 0.75)
+        risk = max(risk, 0.73)
     
     if "traumatic_injury" in parsed_symptoms.get("red_flags", []):
-        risk = max(risk, 0.80)
+        risk = max(risk, 0.75)
     
     if "multiple_injuries" in parsed_symptoms.get("red_flags", []):
-        risk = max(risk, 0.90)
+        risk = max(risk, 0.87)
     
     return risk
 
 
 def _layer3_severity_spectrum(parsed_symptoms: Dict[str, Any]) -> float:
     """
-    Layer 3: Severity spectrum analysis.
-    Returns risk score contribution (0.0 to 1.0).
+    Layer 3: Severity spectrum analysis - maps severity 0-10 to risk 0-1.
+    Returns continuous risk score using exponential curve for better spectrum.
     """
     severity = parsed_symptoms.get("severity", 5.0)
     
-    if severity >= 9.5:
+    if severity >= 10.0:
         return 0.95
-    elif severity >= 9.0:
-        return 0.90
-    elif severity >= 8.5:
-        return 0.85
-    elif severity >= 8.0:
-        return 0.75
-    elif severity >= 7.0:
-        return 0.65
-    elif severity >= 6.0:
-        return 0.50
-    elif severity >= 5.0:
-        return 0.35
-    elif severity >= 4.0:
-        return 0.25
-    else:
-        return 0.15
+    elif severity <= 0.0:
+        return 0.08
+    
+    normalized = severity / 10.0
+    
+    base_risk = 0.08 + (normalized ** 1.8) * 0.87
+    
+    return min(base_risk, 0.95)
 
 
 def _layer4_red_flags(parsed_symptoms: Dict[str, Any]) -> float:
     """
-    Layer 4: Red flags analysis.
+    Layer 4: Red flags analysis - granular spectrum.
     Returns risk score contribution (0.0 to 1.0).
     """
     red_flags = parsed_symptoms.get("red_flags", [])
@@ -133,21 +125,21 @@ def _layer4_red_flags(parsed_symptoms: Dict[str, Any]) -> float:
         risk = max(risk, 0.85)
     
     if any(flag in severe_flags for flag in red_flags):
-        risk = max(risk, 0.70)
+        risk = max(risk, 0.68)
     
     if len(red_flags) >= 3:
         risk = max(risk, 0.90)
     elif len(red_flags) >= 2:
         risk = max(risk, 0.75)
     elif len(red_flags) >= 1:
-        risk = max(risk, 0.50)
+        risk = max(risk, 0.55)
     
     return risk
 
 
 def _layer5_symptom_combinations(parsed_symptoms: Dict[str, Any]) -> float:
     """
-    Layer 5: Symptom combination analysis.
+    Layer 5: Symptom combination analysis - granular spectrum.
     Returns risk score contribution (0.0 to 1.0).
     """
     symptom_categories = parsed_symptoms.get("symptom_categories", [])
@@ -155,17 +147,21 @@ def _layer5_symptom_combinations(parsed_symptoms: Dict[str, Any]) -> float:
     if "chest_pain" in symptom_categories and "shortness_of_breath" in symptom_categories:
         return 0.90
     
-    if "trauma" in symptom_categories and len(symptom_categories) >= 3:
-        return 0.80
+    if "trauma" in symptom_categories and len(symptom_categories) >= 4:
+        return 0.85
+    elif "trauma" in symptom_categories and len(symptom_categories) >= 3:
+        return 0.75
     
-    if len(symptom_categories) >= 4:
-        return 0.60
+    if len(symptom_categories) >= 5:
+        return 0.65
+    elif len(symptom_categories) >= 4:
+        return 0.55
     elif len(symptom_categories) >= 3:
-        return 0.45
+        return 0.42
     elif len(symptom_categories) >= 2:
         return 0.30
     
-    return 0.15
+    return 0.18
 
 
 def _compute_spectrum_risk_score(
@@ -173,9 +169,9 @@ def _compute_spectrum_risk_score(
     parsed_symptoms: Dict[str, Any]
 ) -> float:
     """
-    Compute risk score using layered spectrum approach.
+    Compute risk score using layered spectrum approach with weighted combination.
     
-    Combines multiple layers with weighted contributions.
+    Combines multiple layers with weighted contributions for spectrum.
     
     Args:
         raw_text: Raw symptom text
@@ -194,14 +190,43 @@ def _compute_spectrum_risk_score(
         return layer1
     
     if layer2 >= 0.80:
-        return layer2
+        base_risk = layer2
+        if layer3 > 0.5:
+            base_risk = max(base_risk, layer3 * 0.9)
+        if layer4 > 0.5:
+            base_risk = max(base_risk, layer4 * 0.85)
+        return min(base_risk, 0.95)
     
-    combined = max(layer1, layer2, layer3, layer4, layer5)
+    if layer3 >= 0.70:
+        base_risk = layer3
+        if layer4 > 0.4:
+            base_risk = (base_risk * 0.65) + (layer4 * 0.35)
+        if layer5 > 0.3:
+            base_risk = max(base_risk, layer5 * 0.75)
+        return min(base_risk, 0.92)
     
-    if combined >= 0.75:
-        return min(combined + 0.10, 0.95)
+    weights = [0.30, 0.28, 0.22, 0.12, 0.08]
+    layers = [layer1, layer2, layer3, layer4, layer5]
     
-    return combined
+    weighted_sum = sum(layer * weight for layer, weight in zip(layers, weights))
+    
+    max_layer = max(layers)
+    non_zero_layers = [l for l in layers if l > 0.05]
+    
+    if max_layer >= 0.60:
+        if len(non_zero_layers) >= 3:
+            combined = (weighted_sum * 0.55) + (max_layer * 0.45)
+        else:
+            combined = (weighted_sum * 0.6) + (max_layer * 0.4)
+    elif max_layer >= 0.40:
+        if len(non_zero_layers) >= 2:
+            combined = (weighted_sum * 0.65) + (max_layer * 0.35)
+        else:
+            combined = (weighted_sum * 0.7) + (max_layer * 0.3)
+    else:
+        combined = weighted_sum
+    
+    return min(combined, 0.95)
 
 
 def run_triage(
