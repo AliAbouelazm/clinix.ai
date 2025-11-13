@@ -293,7 +293,7 @@ st.markdown("""
     <div class="logo-text">clinix.ai</div>
     <div class="logo-subtitle">medical triage assessment</div>
     <div style="margin-top: 1rem; font-family: 'Crimson Text', serif; font-size: 0.85rem; color: #8b6f47; font-weight: 600;">
-        Version 4.3.1 - Cache Bust - Severity Fix Active
+        Version 4.3.2 - Double-Check Severity Fix + Enhanced Debug
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -452,12 +452,17 @@ if page == "Triage Assessment":
                         
                         with st.expander("🔍 Debug Info (Click to see calculation details)"):
                             st.write(f"**Raw Text:** {symptom_text}")
+                            st.write(f"**Text Length:** {len(symptom_text)} chars")
+                            st.write(f"**Has 'significant':** {'significant' in symptom_text.lower()}")
+                            st.write(f"**Has 'bleeding':** {'bleeding' in symptom_text.lower()}")
+                            st.write(f"**Has 'won't stop':** {'won\'t stop' in symptom_text.lower() or 'wont stop' in symptom_text.lower()}")
                             st.write(f"**Severity:** {parsed_symptoms.get('severity', 0):.1f}/10")
                             st.write(f"**Symptom Categories:** {', '.join(parsed_symptoms.get('symptom_categories', []))}")
                             st.write(f"**Red Flags:** {', '.join(parsed_symptoms.get('red_flags', []))}")
                             st.write(f"**Calculated Risk Score:** {risk_score:.2%}")
                             st.write(f"**Triage Label:** {triage_label}")
                             st.write(f"**LLM Provider:** {os.getenv('LLM_PROVIDER', 'mock')}")
+                            st.write(f"**Cache Version:** {st.session_state.get('cache_bust', 'not set')}")
                 
                 except Exception as e:
                     st.error(f"Error processing triage: {e}")
