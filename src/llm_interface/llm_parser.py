@@ -140,19 +140,19 @@ def _calculate_severity_spectrum(text_lower: str, injuries: list, injury_severit
     elif any(word in text_lower for word in ["very bad", "really bad", "terrible", "awful"]):
         severity = max(severity, 8.0)
     elif "significant" in text_lower:
-        base_severity = 6.5
         if "bleeding" in text_lower or "blood" in text_lower:
-            if any(phrase in text_lower for phrase in ["won't stop", "wont stop", "not stopping", "continuing", "persistent"]):
-                base_severity = 6.8
+            if "won't stop" in text_lower or "wont stop" in text_lower or "not stopping" in text_lower:
+                severity = 6.8
             else:
-                base_severity = 6.5
-        severity = max(severity, base_severity)
+                severity = 6.5
+        else:
+            severity = 6.5
     elif any(word in text_lower for word in ["bad", "moderate"]):
         severity = max(severity, 6.5)
     elif any(word in text_lower for word in ["mild", "slight", "minor", "little"]):
         severity = min(severity, 4.0)
     
-    if ("bleeding" in text_lower or "blood" in text_lower) and any(phrase in text_lower for phrase in ["won't stop", "wont stop", "not stopping", "continuing", "persistent", "heavy"]):
+    if ("bleeding" in text_lower or "blood" in text_lower) and ("won't stop" in text_lower or "wont stop" in text_lower or "not stopping" in text_lower or "continuing" in text_lower or "persistent" in text_lower or "heavy" in text_lower):
         if "significant" not in text_lower and "severe" not in text_lower:
             severity = max(severity, 7.0)
     
@@ -169,7 +169,11 @@ def _calculate_severity_spectrum(text_lower: str, injuries: list, injury_severit
 
 
 def _mock_parse(raw_text: str) -> Dict[str, Any]:
-    """Mock parser for development/testing when API is unavailable."""
+    """
+    Mock parser for development/testing when API is unavailable.
+    
+    Version 4.3: Fixed severity detection for "significant bleeding that won't stop" = 6.8
+    """
     text_lower = raw_text.lower()
     
     injuries, injury_severity = _detect_injuries(text_lower)
