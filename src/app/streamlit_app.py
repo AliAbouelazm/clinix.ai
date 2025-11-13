@@ -38,8 +38,12 @@ from src.data_preprocessing.create_clinical_features import create_feature_vecto
 from src.inference.triage_engine import run_triage
 from src.config import TRIAGE_LABELS
 from src.visualization.plot_triage_distribution import plot_triage_distribution, plot_severity_vs_risk
+import uuid
 
 st.set_page_config(page_title="clinix.ai", layout="wide", initial_sidebar_state="collapsed")
+
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = str(uuid.uuid4())
 
 st.markdown("""
 <style>
@@ -471,7 +475,7 @@ with tab1:
             with st.spinner("Processing symptoms and computing risk..."):
                 try:
                     with get_db_session() as session:
-                        patient_id = insert_patient(session, age=age, sex=sex)
+                        patient_id = insert_patient(session, user_id=st.session_state.user_id, age=age, sex=sex)
                         
                         parsed_symptoms = parse_symptom_text(symptom_text)
                         parsed_symptoms["raw_text"] = symptom_text
@@ -613,7 +617,7 @@ with tab2:
     if st.button("Load History"):
         try:
             with get_db_session() as session:
-                history = get_patient_history(session, patient_id)
+                history = get_patient_history(session, patient_id, user_id=st.session_state.user_id)
                 
                 if not history:
                     st.warning("No history found for this patient")

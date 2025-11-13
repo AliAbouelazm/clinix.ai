@@ -52,21 +52,33 @@ def init_schema():
         schema_sql = f.read()
     
     with engine.connect() as conn:
+        try:
+            conn.execute(text("SELECT user_id FROM patients LIMIT 1"))
+        except Exception:
+            try:
+                conn.execute(text("ALTER TABLE patients ADD COLUMN user_id TEXT DEFAULT 'default'"))
+                conn.commit()
+            except Exception:
+                pass
+        
         for statement in schema_sql.split(";"):
             statement = statement.strip()
             if statement:
-                conn.execute(text(statement))
+                try:
+                    conn.execute(text(statement))
+                except Exception:
+                    pass
         conn.commit()
 
 
-def insert_patient(session: Session, age: int = None, sex: str = None, other_demographics: str = None) -> int:
+def insert_patient(session: Session, user_id: str, age: int = None, sex: str = None, other_demographics: str = None) -> int:
     """Insert a new patient and return patient_id."""
     result = session.execute(
         text("""
-            INSERT INTO patients (age, sex, other_demographics)
-            VALUES (:age, :sex, :other_demographics)
+            INSERT INTO patients (user_id, age, sex, other_demographics)
+            VALUES (:user_id, :age, :sex, :other_demographics)
         """),
-        {"age": age, "sex": sex, "other_demographics": other_demographics}
+        {"user_id": user_id, "age": age, "sex": sex, "other_demographics": other_demographics}
     )
     session.commit()
     return result.lastrowid
@@ -148,28 +160,34 @@ def insert_triage_prediction(
     return result.lastrowid
 
 
-def get_patient_history(session: Session, patient_id: int):
+def get_patient_history(session: Session, patient_id: int, user_id: str = None):
     """Get all symptom reports and triage predictions for a patient."""
-    result = session.execute(
-        text("""
-            SELECT 
-                sr.id as report_id,
-                sr.raw_text,
-                sr.parsed_symptoms_json,
-                sr.parsed_severity,
-                sr.red_flags_json,
-                sr.timestamp as report_timestamp,
-                tp.risk_score,
-                tp.triage_label,
-                tp.explanation,
-                tp.timestamp as prediction_timestamp
-            FROM symptom_reports sr
-            LEFT JOIN triage_predictions tp ON sr.id = tp.symptom_report_id
-            WHERE sr.patient_id = :patient_id
-            ORDER BY sr.timestamp DESC
-        """),
-        {"patient_id": patient_id}
-    )
+    query = """
+        SELECT 
+            sr.id as report_id,
+            sr.raw_text,
+            sr.parsed_symptoms_json,
+            sr.parsed_severity,
+            sr.red_flags_json,
+            sr.timestamp as report_timestamp,
+            tp.risk_score,
+            tp.triage_label,
+            tp.explanation,
+            tp.timestamp as prediction_timestamp
+        FROM symptom_reports sr
+        INNER JOIN patients p ON sr.patient_id = p.id
+        LEFT JOIN triage_predictions tp ON sr.id = tp.symptom_report_id
+        WHERE sr.patient_id = :patient_id
+    """
+    params = {"patient_id": patient_id}
+    
+    if user_id:
+        query += " AND p.user_id = :user_id"
+        params["user_id"] = user_id
+    
+    query += " ORDER BY sr.timestamp DESC"
+    
+    result = session.execute(text(query), params)
     return result.fetchall()
 
 

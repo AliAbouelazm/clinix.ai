@@ -1,10 +1,13 @@
 CREATE TABLE IF NOT EXISTS patients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id TEXT NOT NULL,
     age INTEGER,
     sex TEXT,
     other_demographics TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_patients_user ON patients(user_id);
 
 CREATE TABLE IF NOT EXISTS symptom_reports (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

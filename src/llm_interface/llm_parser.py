@@ -144,33 +144,62 @@ def _detect_injuries(text_lower: str) -> tuple:
 
 def _calculate_severity_spectrum(text_lower: str, injuries: list, injury_severity: float) -> float:
     """Calculate severity on a spectrum from 0-10."""
-    severity = 5.0
+    severity = 3.0
     
     if injury_severity > 0:
         severity = max(severity, injury_severity)
     
     if any(phrase in text_lower for phrase in ["dying", "death", "dead", "kill me", "im dying", "i'm dying"]):
-        severity = 10.0
-    elif any(word in text_lower for word in ["severe", "extreme", "intense", "unbearable", "critical", "emergency"]):
+        return 10.0
+    
+    if any(word in text_lower for word in ["severe", "extreme", "intense", "unbearable", "critical", "emergency"]):
         severity = max(severity, 9.0)
     elif any(word in text_lower for word in ["very bad", "really bad", "terrible", "awful"]):
         severity = max(severity, 8.0)
-    elif "significant" in text_lower:
+    
+    if "significant" in text_lower:
         if "bleeding" in text_lower or "blood" in text_lower:
             if "won't stop" in text_lower or "wont stop" in text_lower or "not stopping" in text_lower:
                 severity = 6.8
             else:
-                severity = 6.5
+                severity = max(severity, 6.5)
         else:
-            severity = 6.5
-    elif any(word in text_lower for word in ["bad", "moderate"]):
+            severity = max(severity, 6.5)
+    elif any(word in text_lower for word in ["bad", "moderate", "worse", "worsening"]):
         severity = max(severity, 6.5)
-    elif any(word in text_lower for word in ["mild", "slight", "minor", "little"]):
+    elif any(word in text_lower for word in ["mild", "slight", "minor", "little", "bit"]):
         severity = min(severity, 4.0)
     
     if ("bleeding" in text_lower or "blood" in text_lower) and ("won't stop" in text_lower or "wont stop" in text_lower or "not stopping" in text_lower or "continuing" in text_lower or "persistent" in text_lower or "heavy" in text_lower):
         if "significant" not in text_lower and "severe" not in text_lower:
             severity = max(severity, 7.0)
+    
+    if "heart" in text_lower or "chest" in text_lower:
+        if "pain" in text_lower or "hurt" in text_lower or "hurting" in text_lower:
+            severity = max(severity, 8.5)
+        else:
+            severity = max(severity, 6.0)
+    
+    if "shortness" in text_lower or "breath" in text_lower:
+        severity = max(severity, 7.0)
+    
+    if "fever" in text_lower:
+        if "high" in text_lower or "severe" in text_lower:
+            severity = max(severity, 7.5)
+        else:
+            severity = max(severity, 5.5)
+    
+    if "headache" in text_lower:
+        if "severe" in text_lower or "bad" in text_lower:
+            severity = max(severity, 7.0)
+        else:
+            severity = max(severity, 5.0)
+    
+    if "stomach" in text_lower or "abdominal" in text_lower:
+        if "severe" in text_lower or "bad" in text_lower:
+            severity = max(severity, 6.5)
+        else:
+            severity = max(severity, 5.0)
     
     if len(injuries) >= 2:
         severity = max(severity, 8.5)
@@ -181,7 +210,7 @@ def _calculate_severity_spectrum(text_lower: str, injuries: list, injury_severit
     if any(phrase in text_lower for phrase in ["wrong way", "facing wrong", "out of place", "dislocated"]):
         severity = max(severity, 8.0)
     
-    return min(severity, 10.0)
+    return min(max(severity, 3.0), 10.0)
 
 
 def _mock_parse(raw_text: str) -> Dict[str, Any]:
