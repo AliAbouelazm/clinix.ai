@@ -248,6 +248,51 @@ Always consult qualified healthcare providers for medical concerns.
 
 init_schema()
 
+from src.config import MODEL_PATH
+import os
+
+if not MODEL_PATH.exists():
+    st.markdown("""
+    <div class="control-section" style="background-color: #fff8e8; border-left: 4px solid #8b7355;">
+        <div style="font-family: 'Playfair Display', serif; color: #2c3e2d; font-weight: 600; margin-bottom: 0.5rem;">
+            Model Not Trained
+        </div>
+        <p style="font-family: 'Crimson Text', serif; color: #5a4a3a; margin-bottom: 1rem;">
+            The risk classification model needs to be trained before you can use the triage assessment.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button("Train Model Now", type="primary"):
+        with st.spinner("Training model... This may take a minute."):
+            try:
+                import subprocess
+                import sys
+                from pathlib import Path
+                
+                project_root = Path(__file__).parent.parent.parent
+                env = os.environ.copy()
+                env['PYTHONPATH'] = str(project_root)
+                
+                result = subprocess.run(
+                    [sys.executable, "src/models/train_baseline_model.py"],
+                    cwd=project_root,
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=300
+                )
+                
+                if result.returncode == 0:
+                    st.success("Model trained successfully! You can now use the triage assessment.")
+                    st.rerun()
+                else:
+                    st.error(f"Error training model: {result.stderr}")
+                    st.code(result.stdout)
+            except Exception as e:
+                st.error(f"Error: {e}")
+    st.markdown("---")
+
 st.markdown("""
 <div class="control-section">
     <div class="section-title">Navigation</div>
