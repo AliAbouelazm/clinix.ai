@@ -21,15 +21,23 @@ try:
 except:
     pass
 
-CACHE_BUST_VERSION = "4.3.1"
-if 'cache_bust' not in st.session_state:
+CACHE_BUST_VERSION = "4.3.3"
+if 'cache_bust' not in st.session_state or st.session_state.cache_bust != CACHE_BUST_VERSION:
     st.session_state.cache_bust = CACHE_BUST_VERSION
     importlib.invalidate_caches()
     
-    if 'src.llm_interface.llm_parser' in sys.modules:
-        importlib.reload(sys.modules['src.llm_interface.llm_parser'])
-    if 'src.inference.triage_engine' in sys.modules:
-        importlib.reload(sys.modules['src.inference.triage_engine'])
+    modules_to_reload = [
+        'src.llm_interface.llm_parser',
+        'src.inference.triage_engine',
+        'src.database.db_utils'
+    ]
+    
+    for module_name in modules_to_reload:
+        if module_name in sys.modules:
+            try:
+                importlib.reload(sys.modules[module_name])
+            except Exception:
+                pass
 
 from src.database.db_utils import get_db_session, insert_patient, insert_symptom_report, insert_clinical_features, insert_triage_prediction, get_patient_history
 from src.database.db_utils import init_schema
@@ -382,7 +390,7 @@ st.markdown("""
     <div class="logo-text">clinix.ai</div>
     <div class="logo-subtitle">medical triage assessment</div>
     <div style="margin-top: 1rem; font-family: 'Inter', sans-serif; font-size: 0.75rem; color: #666666; font-weight: 400; text-transform: uppercase; letter-spacing: 0.5px;">
-        Version 4.3.2
+        Version 4.3.3 - Schema Fix
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -395,7 +403,10 @@ Always consult qualified healthcare providers for medical concerns.
 </div>
 """, unsafe_allow_html=True)
 
-init_schema()
+try:
+    init_schema()
+except Exception as e:
+    st.warning(f"Database initialization warning: {str(e)[:100]}")
 
 from src.config import MODEL_PATH
 import os

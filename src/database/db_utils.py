@@ -45,48 +45,60 @@ def get_db_session():
 
 def init_schema():
     """Initialize database schema from schema.sql."""
-    schema_path = PROJECT_ROOT / "src" / "database" / "schema.sql"
-    engine = get_engine()
-    
-    with engine.connect() as conn:
-        with open(schema_path, "r") as f:
-            schema_sql = f.read()
+    try:
+        schema_path = PROJECT_ROOT / "src" / "database" / "schema.sql"
+        if not schema_path.exists():
+            return
         
-        for statement in schema_sql.split(";"):
-            statement = statement.strip()
-            if statement and not statement.isspace():
-                try:
-                    conn.execute(text(statement))
-                except Exception as e:
-                    error_str = str(e).lower()
-                    if "already exists" not in error_str and "duplicate" not in error_str:
-                        pass
+        engine = get_engine()
         
-        try:
-            result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='patients'"))
-            table_exists = result.fetchone() is not None
+        with engine.connect() as conn:
+            try:
+                with open(schema_path, "r") as f:
+                    schema_sql = f.read()
+            except Exception:
+                return
             
-            if table_exists:
-                try:
-                    result = conn.execute(text("PRAGMA table_info(patients)"))
-                    rows = result.fetchall()
-                    columns = []
-                    for row in rows:
-                        if len(row) > 1:
-                            columns.append(row[1])
-                    
-                    if "user_id" not in columns:
-                        try:
-                            conn.execute(text("ALTER TABLE patients ADD COLUMN user_id TEXT DEFAULT 'default'"))
-                            conn.commit()
-                        except Exception:
+            for statement in schema_sql.split(";"):
+                statement = statement.strip()
+                if statement and not statement.isspace():
+                    try:
+                        conn.execute(text(statement))
+                    except Exception as e:
+                        error_str = str(e).lower()
+                        if "already exists" not in error_str and "duplicate" not in error_str and "syntax error" not in error_str:
                             pass
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        
-        conn.commit()
+            
+            try:
+                result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='patients'"))
+                table_exists = result.fetchone() is not None
+                
+                if table_exists:
+                    try:
+                        result = conn.execute(text("PRAGMA table_info(patients)"))
+                        rows = result.fetchall()
+                        columns = []
+                        for row in rows:
+                            if len(row) > 1:
+                                columns.append(row[1])
+                        
+                        if "user_id" not in columns:
+                            try:
+                                conn.execute(text("ALTER TABLE patients ADD COLUMN user_id TEXT DEFAULT 'default'"))
+                                conn.commit()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            
+            try:
+                conn.commit()
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def insert_patient(session: Session, user_id: str, age: int = None, sex: str = None, other_demographics: str = None) -> int:
