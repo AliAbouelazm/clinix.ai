@@ -5,6 +5,7 @@ import pandas as pd
 import json
 import sys
 import os
+import importlib
 from pathlib import Path
 from datetime import datetime
 
@@ -19,6 +20,16 @@ try:
     os.chdir(project_root)
 except:
     pass
+
+CACHE_BUST_VERSION = "4.3.1"
+if 'cache_bust' not in st.session_state:
+    st.session_state.cache_bust = CACHE_BUST_VERSION
+    importlib.invalidate_caches()
+    
+    if 'src.llm_interface.llm_parser' in sys.modules:
+        importlib.reload(sys.modules['src.llm_interface.llm_parser'])
+    if 'src.inference.triage_engine' in sys.modules:
+        importlib.reload(sys.modules['src.inference.triage_engine'])
 
 from src.database.db_utils import get_db_session, insert_patient, insert_symptom_report, insert_clinical_features, insert_triage_prediction, get_patient_history
 from src.database.db_utils import init_schema
@@ -282,7 +293,7 @@ st.markdown("""
     <div class="logo-text">clinix.ai</div>
     <div class="logo-subtitle">medical triage assessment</div>
     <div style="margin-top: 1rem; font-family: 'Crimson Text', serif; font-size: 0.85rem; color: #8b6f47; font-weight: 600;">
-        Version 4.3 - Fixed Severity Detection (Significant Bleeding = 6.8)
+        Version 4.3.1 - Cache Bust - Severity Fix Active
     </div>
 </div>
 """, unsafe_allow_html=True)
