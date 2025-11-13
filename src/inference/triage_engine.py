@@ -53,17 +53,27 @@ def _check_critical_symptoms(parsed_symptoms: Dict[str, Any], raw_text: str = No
     if severity >= 9.0:
         return True
     
+    if len(red_flags) >= 1 and severity >= 7.0:
+        return True
+    
     if len(red_flags) >= 2:
         return True
     
     if "chest_pain" in symptom_categories and "shortness_of_breath" in symptom_categories:
         return True
     
-    if any(flag in ["severe_chest_pain", "difficulty_breathing", "loss_of_consciousness"] for flag in red_flags):
+    if any(flag in ["severe_chest_pain", "difficulty_breathing", "loss_of_consciousness", "critical_severity"] for flag in red_flags):
         return True
     
-    if any(word in text_lower for word in ["dying", "death", "can't breathe", "can't breath", "bleeding", "blood"]):
+    if any(phrase in text_lower for phrase in ["dying", "death", "im dying", "i'm dying", "i am dying"]):
+        return True
+    
+    if any(phrase in text_lower for phrase in ["dying", "death", "can't breathe", "can't breath", "cant breathe", "bleeding", "blood"]):
         if "chest" in text_lower or "heart" in text_lower or "breath" in text_lower:
+            return True
+    
+    if ("heart" in text_lower and ("hurt" in text_lower or "pain" in text_lower or "hurting" in text_lower)):
+        if severity >= 6.0 or "dying" in text_lower:
             return True
     
     if "bleeding" in text_lower or "blood" in text_lower:

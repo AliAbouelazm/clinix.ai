@@ -99,7 +99,7 @@ def _mock_parse(raw_text: str) -> Dict[str, Any]:
     text_lower = raw_text.lower()
     
     symptom_categories = []
-    if any(word in text_lower for word in ["chest", "heart", "cardiac", "aching pain in my heart"]):
+    if any(word in text_lower for word in ["chest", "heart", "cardiac", "aching pain in my heart", "heart is", "heart hurting", "heart pain"]):
         symptom_categories.append("chest_pain")
     if any(word in text_lower for word in ["breath", "breathing", "shortness", "short of breath"]):
         symptom_categories.append("shortness_of_breath")
@@ -113,7 +113,7 @@ def _mock_parse(raw_text: str) -> Dict[str, Any]:
         symptom_categories.append("general_discomfort")
     
     severity = 5.0
-    if any(word in text_lower for word in ["dying", "death", "dead", "kill me"]):
+    if any(phrase in text_lower for phrase in ["dying", "death", "dead", "kill me", "im dying", "i'm dying", "i am dying"]):
         severity = 10.0
     elif any(word in text_lower for word in ["severe", "extreme", "intense", "unbearable", "critical"]):
         severity = 9.0
@@ -123,19 +123,25 @@ def _mock_parse(raw_text: str) -> Dict[str, Any]:
         severity = 3.0
     
     red_flags = []
-    if any(word in text_lower for word in ["severe chest", "crushing", "pressure", "heart pain", "aching pain in my heart"]):
+    if any(phrase in text_lower for phrase in ["severe chest", "crushing", "pressure", "heart pain", "aching pain in my heart", "heart is hurting", "heart hurting", "heart hurts"]):
         red_flags.append("severe_chest_pain")
     if any(word in text_lower for word in ["unconscious", "passed out", "fainted"]):
         red_flags.append("loss_of_consciousness")
-    if any(word in text_lower for word in ["can't breathe", "struggling to breathe", "shortness of breath", "short of breath"]):
+    if any(phrase in text_lower for phrase in ["can't breathe", "struggling to breathe", "shortness of breath", "short of breath", "cant breathe"]):
         red_flags.append("difficulty_breathing")
     if any(word in text_lower for word in ["bleeding", "blood", "hemorrhage"]):
         red_flags.append("active_bleeding")
-    if "chest" in text_lower and "breath" in text_lower:
+    if ("chest" in text_lower or "heart" in text_lower) and "breath" in text_lower:
         red_flags.append("cardiac_concern")
+    if "heart" in text_lower and ("hurt" in text_lower or "pain" in text_lower or "hurting" in text_lower):
+        red_flags.append("severe_chest_pain")
     
     if severity >= 9.0:
         red_flags.append("critical_severity")
+    
+    if "dying" in text_lower:
+        red_flags.append("critical_severity")
+        severity = max(severity, 10.0)
     
     return {
         "symptom_categories": symptom_categories,
