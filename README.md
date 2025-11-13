@@ -2,7 +2,7 @@
 
 A medical triage and symptom-to-risk assessment system that uses LLM semantic interpretation, classical ML models, SQL storage, and clinical feature engineering to provide triage recommendations.
 
-## 🚀 Live Demo
+## Live Demo
 
 Try the interactive Streamlit app: **[https://clinixai.streamlit.app/](https://clinixai.streamlit.app/)**
 
