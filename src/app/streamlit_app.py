@@ -79,7 +79,7 @@ st.markdown("""
     
     .stButton>button {
         background-color: #6b5237;
-        color: #ffffff !important;
+        color: #f5f3f0 !important;
         border: none;
         font-family: 'Crimson Text', serif;
         font-size: 1rem;
@@ -87,20 +87,19 @@ st.markdown("""
         padding: 0.6rem 1.5rem;
         border-radius: 4px;
         transition: background-color 0.3s;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
     
     .stButton>button:hover {
         background-color: #5a4229;
-        color: #ffffff !important;
+        color: #f5f3f0 !important;
     }
     
     .stButton>button:focus {
-        color: #ffffff !important;
+        color: #f5f3f0 !important;
     }
     
     .stButton>button:active {
-        color: #ffffff !important;
+        color: #f5f3f0 !important;
     }
     
     .stSelectbox label, .stNumberInput label, .stTextArea label, .stRadio label {
@@ -111,9 +110,19 @@ st.markdown("""
     
     .stSelectbox>div>div, .stNumberInput>div>div>input, .stTextArea>div>div>textarea {
         font-family: 'Crimson Text', serif;
-        color: #3d2f1f;
-        background-color: #fefefe;
+        color: #3d2f1f !important;
+        background-color: #fefefe !important;
         border: 1px solid #c9b8a3;
+    }
+    
+    .stNumberInput>div>div>input {
+        color: #3d2f1f !important;
+        background-color: #fefefe !important;
+    }
+    
+    input[type="number"] {
+        color: #3d2f1f !important;
+        background-color: #fefefe !important;
     }
     
     .stTextArea>div>div>textarea {
