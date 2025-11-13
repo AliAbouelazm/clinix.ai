@@ -3,7 +3,12 @@
 import streamlit as st
 import pandas as pd
 import json
+import sys
+from pathlib import Path
 from datetime import datetime
+
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from src.database.db_utils import get_db_session, insert_patient, insert_symptom_report, insert_clinical_features, insert_triage_prediction, get_patient_history
 from src.database.db_utils import init_schema
