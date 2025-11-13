@@ -288,6 +288,32 @@ st.markdown("""
         background-color: #f8f8f8 !important;
         border: 1px solid #e5e5e5 !important;
     }
+    
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        border-bottom: 1px solid #e5e5e5;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: #666666;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px 6px 0 0;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        color: #1a1a1a;
+        font-weight: 600;
+        background-color: transparent;
+        border-bottom: 2px solid #1a1a1a;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #1a1a1a;
+        background-color: #f8f8f8;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -303,7 +329,7 @@ st.markdown("""
 
 st.markdown("""
 <div class="disclaimer">
-<strong>⚠️ Important Disclaimer:</strong> This system is for educational and demonstration purposes only. 
+<strong>Important Disclaimer:</strong> This system is for educational and demonstration purposes only. 
 It is NOT a substitute for professional medical advice, diagnosis, or treatment. 
 Always consult qualified healthcare providers for medical concerns.
 </div>
@@ -354,19 +380,10 @@ if not MODEL_PATH.exists():
                     st.code(result.stdout)
             except Exception as e:
                 st.error(f"Error: {e}")
-    st.markdown("---")
 
-st.markdown("""
-<div class="control-section">
-    <div class="section-title">Navigation</div>
-</div>
-""", unsafe_allow_html=True)
+tab1, tab2, tab3 = st.tabs(["Triage Assessment", "Patient History", "Analytics"])
 
-page = st.radio("", ["Triage Assessment", "Patient History", "Analytics"], horizontal=True, label_visibility="collapsed")
-
-st.markdown("---")
-
-if page == "Triage Assessment":
+with tab1:
     st.markdown("""
     <div class="control-section">
         <div class="section-title">Patient Information</div>
@@ -452,20 +469,6 @@ if page == "Triage Assessment":
                             "parsed_symptoms": parsed_symptoms,
                             "raw_text": symptom_text
                         }
-                        
-                        with st.expander("🔍 Debug Info (Click to see calculation details)"):
-                            st.write(f"**Raw Text:** {symptom_text}")
-                            st.write(f"**Text Length:** {len(symptom_text)} chars")
-                            st.write(f"**Has 'significant':** {'significant' in symptom_text.lower()}")
-                            st.write(f"**Has 'bleeding':** {'bleeding' in symptom_text.lower()}")
-                            st.write(f"**Has 'won't stop':** {'won\'t stop' in symptom_text.lower() or 'wont stop' in symptom_text.lower()}")
-                            st.write(f"**Severity:** {parsed_symptoms.get('severity', 0):.1f}/10")
-                            st.write(f"**Symptom Categories:** {', '.join(parsed_symptoms.get('symptom_categories', []))}")
-                            st.write(f"**Red Flags:** {', '.join(parsed_symptoms.get('red_flags', []))}")
-                            st.write(f"**Calculated Risk Score:** {risk_score:.2%}")
-                            st.write(f"**Triage Label:** {triage_label}")
-                            st.write(f"**LLM Provider:** {os.getenv('LLM_PROVIDER', 'mock')}")
-                            st.write(f"**Cache Version:** {st.session_state.get('cache_bust', 'not set')}")
                 
                 except Exception as e:
                     st.error(f"Error processing triage: {e}")
@@ -533,14 +536,14 @@ if page == "Triage Assessment":
             red_flags = parsed.get("red_flags", [])
             if red_flags:
                 for flag in red_flags:
-                    st.markdown(f"- ⚠️ {flag}")
+                    st.markdown(f"- {flag}")
             else:
                 st.markdown("None detected")
             
             st.markdown("**Duration:**")
             st.markdown(f"{parsed.get('duration_days', 0)} days")
 
-elif page == "Patient History":
+with tab2:
     st.markdown("""
     <div class="section-title">Patient History</div>
     """, unsafe_allow_html=True)
@@ -587,7 +590,7 @@ elif page == "Patient History":
         except Exception as e:
             st.error(f"Error loading history: {e}")
 
-elif page == "Analytics":
+with tab3:
     st.markdown("""
     <div class="section-title">Triage Analytics</div>
     """, unsafe_allow_html=True)
