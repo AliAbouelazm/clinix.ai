@@ -106,14 +106,23 @@ def run_triage(
     text_lower = (raw_text or "").lower().strip()
     
     if text_lower:
-        if "dying" in text_lower:
+        if "dying" in text_lower or "im dying" in text_lower or "i'm dying" in text_lower:
             return (0.95, "urgent", "CRITICAL: The phrase 'dying' was detected in your symptoms. This requires immediate medical attention. Please seek emergency care immediately.")
         
-        if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts", "aching"]):
-            return (0.95, "urgent", "CRITICAL: Heart pain or discomfort combined with other symptoms requires immediate medical evaluation. Please seek emergency care immediately.")
+        if "bleeding" in text_lower or "blood" in text_lower:
+            if "heart" in text_lower or "chest" in text_lower or "pain" in text_lower:
+                return (0.95, "urgent", "CRITICAL: Bleeding combined with heart/chest symptoms requires immediate medical evaluation. Please seek emergency care immediately.")
+            if any(word in text_lower for word in ["heavy", "lot", "much", "severe", "bad"]):
+                return (0.95, "urgent", "CRITICAL: Significant bleeding detected. This requires immediate medical attention. Please seek emergency care immediately.")
+        
+        if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts", "aching", "ache"]):
+            return (0.95, "urgent", "CRITICAL: Heart pain or discomfort requires immediate medical evaluation. Please seek emergency care immediately.")
         
         if "chest" in text_lower and "pain" in text_lower and ("breath" in text_lower or "short" in text_lower):
             return (0.95, "urgent", "CRITICAL: Chest pain with breathing difficulties is a medical emergency. Please seek emergency care immediately.")
+        
+        if "heart" in text_lower and ("bleeding" in text_lower or "blood" in text_lower):
+            return (0.95, "urgent", "CRITICAL: Heart symptoms combined with bleeding is a medical emergency. Please seek emergency care immediately.")
     
     is_critical = _check_critical_symptoms(parsed_symptoms, raw_text)
     

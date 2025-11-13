@@ -42,6 +42,38 @@ def compute_risk_score(
     Returns:
         Risk score between 0 and 1
     """
+    raw_text = parsed_symptoms.get("raw_text", "")
+    text_lower = (raw_text or "").lower().strip()
+    
+    if text_lower:
+        if "dying" in text_lower or "im dying" in text_lower:
+            return 0.95
+        
+        if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts", "aching", "ache"]):
+            return 0.95
+        
+        if ("bleeding" in text_lower or "blood" in text_lower) and ("heart" in text_lower or "chest" in text_lower or "pain" in text_lower):
+            return 0.95
+        
+        if "chest" in text_lower and "pain" in text_lower and ("breath" in text_lower or "short" in text_lower):
+            return 0.95
+    
+    symptom_categories = parsed_symptoms.get("symptom_categories", [])
+    red_flags = parsed_symptoms.get("red_flags", [])
+    severity = parsed_symptoms.get("severity", 0)
+    
+    if severity >= 9.0:
+        return 0.95
+    
+    if len(red_flags) >= 2:
+        return 0.95
+    
+    if "chest_pain" in symptom_categories and "shortness_of_breath" in symptom_categories:
+        return 0.95
+    
+    if any(flag in ["severe_chest_pain", "difficulty_breathing", "loss_of_consciousness", "critical_severity"] for flag in red_flags):
+        return 0.95
+    
     model = load_model()
     feature_names = load_feature_names()
     
@@ -54,4 +86,5 @@ def compute_risk_score(
         risk_score = float(model.predict(X)[0])
     
     return float(risk_score)
+
 
