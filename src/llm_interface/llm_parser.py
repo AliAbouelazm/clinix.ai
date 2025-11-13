@@ -94,12 +94,77 @@ def _parse_with_anthropic(raw_text: str) -> Dict[str, Any]:
         return _mock_parse(raw_text)
 
 
+def _detect_injuries(text_lower: str) -> tuple:
+    """Detect injuries and fractures in text."""
+    injuries = []
+    injury_severity = 0.0
+    
+    fracture_keywords = ["broken", "fracture", "cracked", "shattered", "snapped"]
+    dislocation_keywords = ["dislocated", "out of place", "wrong way", "facing wrong", "misaligned", "popped out"]
+    trauma_keywords = ["hit", "struck", "fell", "fall", "accident", "crash", "collision"]
+    
+    body_parts = ["arm", "leg", "foot", "ankle", "wrist", "hand", "finger", "toe", "shoulder", "elbow", "knee", "hip", "rib", "spine", "neck", "back"]
+    
+    for part in body_parts:
+        if part in text_lower:
+            if any(keyword in text_lower for keyword in fracture_keywords):
+                injuries.append(f"fracture_{part}")
+                injury_severity = max(injury_severity, 8.5)
+            elif any(keyword in text_lower for keyword in dislocation_keywords):
+                injuries.append(f"dislocation_{part}")
+                injury_severity = max(injury_severity, 8.0)
+            elif any(keyword in text_lower for keyword in trauma_keywords):
+                injuries.append(f"trauma_{part}")
+                injury_severity = max(injury_severity, 7.0)
+    
+    if "broken" in text_lower:
+        injury_severity = max(injury_severity, 8.5)
+    
+    if any(keyword in text_lower for keyword in dislocation_keywords):
+        injury_severity = max(injury_severity, 8.0)
+    
+    return injuries, injury_severity
+
+
+def _calculate_severity_spectrum(text_lower: str, injuries: list, injury_severity: float) -> float:
+    """Calculate severity on a spectrum from 0-10."""
+    severity = 5.0
+    
+    if injury_severity > 0:
+        severity = max(severity, injury_severity)
+    
+    if any(phrase in text_lower for phrase in ["dying", "death", "dead", "kill me", "im dying", "i'm dying"]):
+        severity = 10.0
+    elif any(word in text_lower for word in ["severe", "extreme", "intense", "unbearable", "critical", "emergency"]):
+        severity = max(severity, 9.0)
+    elif any(word in text_lower for word in ["very bad", "really bad", "terrible", "awful"]):
+        severity = max(severity, 8.0)
+    elif any(word in text_lower for word in ["bad", "moderate", "significant"]):
+        severity = max(severity, 6.5)
+    elif any(word in text_lower for word in ["mild", "slight", "minor", "little"]):
+        severity = min(severity, 4.0)
+    
+    if len(injuries) >= 2:
+        severity = max(severity, 8.5)
+    
+    if "broken" in text_lower and ("arm" in text_lower or "leg" in text_lower or "foot" in text_lower):
+        severity = max(severity, 8.5)
+    
+    if any(phrase in text_lower for phrase in ["wrong way", "facing wrong", "out of place", "dislocated"]):
+        severity = max(severity, 8.0)
+    
+    return min(severity, 10.0)
+
+
 def _mock_parse(raw_text: str) -> Dict[str, Any]:
     """Mock parser for development/testing when API is unavailable."""
     text_lower = raw_text.lower()
     
+    injuries, injury_severity = _detect_injuries(text_lower)
+    
     symptom_categories = []
-    if any(word in text_lower for word in ["chest", "heart", "cardiac", "aching pain in my heart", "heart is", "heart hurting", "heart pain"]):
+    
+    if any(word in text_lower for word in ["chest", "heart", "cardiac"]):
         symptom_categories.append("chest_pain")
     if any(word in text_lower for word in ["breath", "breathing", "shortness", "short of breath"]):
         symptom_categories.append("shortness_of_breath")
@@ -107,47 +172,46 @@ def _mock_parse(raw_text: str) -> Dict[str, Any]:
         symptom_categories.append("fever")
     if any(word in text_lower for word in ["head", "headache"]):
         symptom_categories.append("headache")
+    if any(word in text_lower for word in ["stomach", "abdominal", "belly", "abdomen"]):
+        symptom_categories.append("abdominal_pain")
     if any(word in text_lower for word in ["bleeding", "blood", "hemorrhage"]):
         symptom_categories.append("bleeding")
+    if injuries:
+        symptom_categories.extend(injuries)
+        symptom_categories.append("trauma")
+    
     if not symptom_categories:
         symptom_categories.append("general_discomfort")
     
-    severity = 5.0
-    if any(phrase in text_lower for phrase in ["dying", "death", "dead", "kill me", "im dying", "i'm dying", "i am dying"]):
-        severity = 10.0
-    elif any(word in text_lower for word in ["severe", "extreme", "intense", "unbearable", "critical"]):
-        severity = 9.0
-    elif any(word in text_lower for word in ["moderate", "bad"]):
-        severity = 6.0
-    elif any(word in text_lower for word in ["mild", "slight", "minor"]):
-        severity = 3.0
+    severity = _calculate_severity_spectrum(text_lower, injuries, injury_severity)
     
     red_flags = []
-    if any(phrase in text_lower for phrase in ["severe chest", "crushing", "pressure", "heart pain", "aching pain in my heart", "heart is hurting", "heart hurting", "heart hurts"]):
+    
+    if any(phrase in text_lower for phrase in ["severe chest", "crushing", "pressure", "heart pain"]):
         red_flags.append("severe_chest_pain")
     if any(word in text_lower for word in ["unconscious", "passed out", "fainted"]):
         red_flags.append("loss_of_consciousness")
-    if any(phrase in text_lower for phrase in ["can't breathe", "struggling to breathe", "shortness of breath", "short of breath", "cant breathe"]):
+    if any(phrase in text_lower for phrase in ["can't breathe", "struggling to breathe", "shortness of breath"]):
         red_flags.append("difficulty_breathing")
     if any(word in text_lower for word in ["bleeding", "blood", "hemorrhage"]):
         red_flags.append("active_bleeding")
-    if ("chest" in text_lower or "heart" in text_lower) and "breath" in text_lower:
-        red_flags.append("cardiac_concern")
-    if "heart" in text_lower and ("hurt" in text_lower or "pain" in text_lower or "hurting" in text_lower):
-        red_flags.append("severe_chest_pain")
+    if injuries:
+        red_flags.append("traumatic_injury")
+        if len(injuries) >= 2:
+            red_flags.append("multiple_injuries")
+    if "broken" in text_lower:
+        red_flags.append("fracture")
+    if any(phrase in text_lower for phrase in ["wrong way", "facing wrong", "out of place", "dislocated"]):
+        red_flags.append("dislocation")
     
     if severity >= 9.0:
         red_flags.append("critical_severity")
     
-    if "dying" in text_lower:
-        red_flags.append("critical_severity")
-        severity = max(severity, 10.0)
-    
     return {
         "symptom_categories": symptom_categories,
         "severity": severity,
-        "duration_days": 3,
-        "pattern": "progressive" if "worse" in text_lower or "increasing" in text_lower else "constant",
+        "duration_days": 1 if injuries else 3,
+        "pattern": "acute" if injuries else ("progressive" if "worse" in text_lower else "constant"),
         "red_flags": red_flags
     }
 
@@ -234,14 +298,15 @@ def _explain_with_anthropic(risk_score: float, triage_label: str, parsed_symptom
 
 def _mock_explanation(risk_score: float, triage_label: str, parsed_symptoms: Dict, red_flags: list) -> str:
     """Mock explanation for development/testing."""
-    base = f"This case is classified as {triage_label} based on a risk score of {risk_score:.2f}."
+    base = f"This case is classified as {triage_label} based on a risk score of {risk_score:.2%}."
     
     if red_flags:
         base += f" Red flags detected: {', '.join(red_flags)}."
     
-    if parsed_symptoms.get("severity", 0) > 7:
-        base += " High symptom severity contributes to the risk assessment."
+    severity = parsed_symptoms.get("severity", 0)
+    if severity >= 8.0:
+        base += f" High symptom severity ({severity:.1f}/10) indicates urgent medical evaluation may be needed."
+    elif severity >= 6.0:
+        base += f" Moderate to high severity ({severity:.1f}/10) suggests consultation with a healthcare provider."
     
     return base
-
-

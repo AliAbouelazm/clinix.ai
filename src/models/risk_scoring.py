@@ -1,4 +1,4 @@
-"""Risk scoring utilities."""
+"""Risk scoring utilities with spectrum-based assessment."""
 
 import joblib
 import numpy as np
@@ -26,25 +26,6 @@ def load_feature_names() -> list:
     return joblib.load(feature_names_path)
 
 
-def _check_critical_in_text(raw_text: str) -> bool:
-    """Check if text contains critical symptoms."""
-    if not raw_text:
-        return False
-    
-    text_lower = raw_text.lower().strip()
-    
-    if "dying" in text_lower:
-        return True
-    
-    if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts", "aching", "ache"]):
-        return True
-    
-    if ("bleeding" in text_lower or "blood" in text_lower) and ("heart" in text_lower or "chest" in text_lower or "pain" in text_lower):
-        return True
-    
-    return False
-
-
 def compute_risk_score(
     parsed_symptoms: Dict[str, Any],
     age: int = None,
@@ -53,7 +34,7 @@ def compute_risk_score(
     """
     Compute risk score from parsed symptoms and demographics.
     
-    CRITICAL CHECK HAPPENS FIRST - returns 0.95 if critical symptoms detected.
+    Uses spectrum-based approach - checks multiple factors and returns highest risk.
     
     Args:
         parsed_symptoms: Parsed symptom dictionary
@@ -64,28 +45,44 @@ def compute_risk_score(
         Risk score between 0 and 1
     """
     raw_text = parsed_symptoms.get("raw_text", "")
+    text_lower = (raw_text or "").lower().strip()
     
-    if _check_critical_in_text(raw_text):
-        return 0.95
+    risk_score = 0.0
     
-    symptom_categories = parsed_symptoms.get("symptom_categories", [])
-    red_flags = parsed_symptoms.get("red_flags", [])
-    severity = parsed_symptoms.get("severity", 0)
+    if "dying" in text_lower:
+        risk_score = max(risk_score, 0.95)
     
+    if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts"]):
+        risk_score = max(risk_score, 0.90)
+    
+    if "broken" in text_lower:
+        risk_score = max(risk_score, 0.80)
+    
+    if any(phrase in text_lower for phrase in ["wrong way", "facing wrong", "dislocated"]):
+        risk_score = max(risk_score, 0.80)
+    
+    severity = parsed_symptoms.get("severity", 5.0)
     if severity >= 9.0:
-        return 0.95
+        risk_score = max(risk_score, 0.90)
+    elif severity >= 8.0:
+        risk_score = max(risk_score, 0.75)
+    elif severity >= 7.0:
+        risk_score = max(risk_score, 0.60)
     
+    red_flags = parsed_symptoms.get("red_flags", [])
     if len(red_flags) >= 2:
-        return 0.95
+        risk_score = max(risk_score, 0.80)
+    elif len(red_flags) >= 1:
+        risk_score = max(risk_score, 0.60)
     
-    if "chest_pain" in symptom_categories and "shortness_of_breath" in symptom_categories:
-        return 0.95
+    if "traumatic_injury" in red_flags or "fracture" in red_flags or "dislocation" in red_flags:
+        risk_score = max(risk_score, 0.80)
     
-    if any(flag in ["severe_chest_pain", "difficulty_breathing", "loss_of_consciousness", "critical_severity"] for flag in red_flags):
-        return 0.95
+    if risk_score >= 0.75:
+        return risk_score
     
     if not MODEL_PATH.exists():
-        return 0.3
+        return max(risk_score, 0.30)
     
     try:
         model = load_model()
@@ -95,10 +92,10 @@ def compute_risk_score(
         X = feature_vector_to_array(feature_vector, feature_names).reshape(1, -1)
         
         if hasattr(model, "predict_proba"):
-            risk_score = model.predict_proba(X)[0][1]
+            model_score = model.predict_proba(X)[0][1]
         else:
-            risk_score = float(model.predict(X)[0])
+            model_score = float(model.predict(X)[0])
         
-        return float(risk_score)
+        return max(risk_score, float(model_score))
     except Exception:
-        return 0.3
+        return max(risk_score, 0.30)
