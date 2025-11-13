@@ -103,6 +103,18 @@ def run_triage(
     if not raw_text:
         raw_text = parsed_symptoms.get("raw_text", "")
     
+    text_lower = (raw_text or "").lower().strip()
+    
+    if text_lower:
+        if "dying" in text_lower:
+            return (0.95, "urgent", "CRITICAL: The phrase 'dying' was detected in your symptoms. This requires immediate medical attention. Please seek emergency care immediately.")
+        
+        if "heart" in text_lower and any(word in text_lower for word in ["hurt", "pain", "hurting", "hurts", "aching"]):
+            return (0.95, "urgent", "CRITICAL: Heart pain or discomfort combined with other symptoms requires immediate medical evaluation. Please seek emergency care immediately.")
+        
+        if "chest" in text_lower and "pain" in text_lower and ("breath" in text_lower or "short" in text_lower):
+            return (0.95, "urgent", "CRITICAL: Chest pain with breathing difficulties is a medical emergency. Please seek emergency care immediately.")
+    
     is_critical = _check_critical_symptoms(parsed_symptoms, raw_text)
     
     if is_critical:
