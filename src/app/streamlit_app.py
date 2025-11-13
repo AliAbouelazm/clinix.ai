@@ -384,6 +384,7 @@ if page == "Triage Assessment":
                         patient_id = insert_patient(session, age=age, sex=sex)
                         
                         parsed_symptoms = parse_symptom_text(symptom_text)
+                        parsed_symptoms["raw_text"] = symptom_text
                         
                         symptom_report_id = insert_symptom_report(
                             session,
@@ -403,12 +404,19 @@ if page == "Triage Assessment":
                             feature_vector=feature_vector
                         )
                         
-                        risk_score, triage_label, explanation = run_triage(
-                            parsed_symptoms=parsed_symptoms,
-                            age=age,
-                            sex=sex,
-                            raw_text=symptom_text
-                        )
+                        try:
+                            risk_score, triage_label, explanation = run_triage(
+                                parsed_symptoms=parsed_symptoms,
+                                age=age,
+                                sex=sex,
+                                raw_text=symptom_text
+                            )
+                        except TypeError:
+                            risk_score, triage_label, explanation = run_triage(
+                                parsed_symptoms=parsed_symptoms,
+                                age=age,
+                                sex=sex
+                            )
                         
                         insert_triage_prediction(
                             session,

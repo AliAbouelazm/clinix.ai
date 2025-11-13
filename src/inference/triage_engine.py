@@ -40,6 +40,9 @@ def _check_critical_symptoms(parsed_symptoms: Dict[str, Any], raw_text: str = No
     red_flags = parsed_symptoms.get("red_flags", [])
     severity = parsed_symptoms.get("severity", 0)
     
+    if not raw_text:
+        raw_text = parsed_symptoms.get("raw_text", "")
+    
     critical_symptoms = [
         "chest_pain", "heart", "cardiac", "shortness_of_breath",
         "bleeding", "hemorrhage", "unconscious", "severe_chest_pain"
